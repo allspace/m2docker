@@ -54,6 +54,10 @@ case "$M2D_LNX_DIST" in
 		;;
 esac
 
+#call plugin for specific application
+$M2D_APP_ROOT/plugins/m2d-$2.sh
+
+#packaging to tar
 CUR=$(pwd);
 
 cd $IMG_BASE;

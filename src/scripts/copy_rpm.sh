@@ -1,3 +1,5 @@
+#make pipe line fail immediately once any of member command fails
+set -o pipefail;
 
 check_blacklist()
 {
@@ -43,14 +45,14 @@ copy_rpm_dep_file()
 	
 	pkg=$(rpm -qf "$file");
 	if [ "$?" = "0" ]; then
-		copy_rpm "$pkg";
+		copy_pkg "$pkg";
 	else
 		copy_file "$file";
 		real=$(readlink -f "$file");
 		if [ "$real" != "$file" ]; then
 			pkg=$(rpm -qf "$real");
 			if [ "$?" = "0" ]; then 
-			    copy_rpm "$pkg";
+			    copy_pkg "$pkg";
 			else
 			    copy_file "$real";
 			fi
@@ -58,7 +60,7 @@ copy_rpm_dep_file()
 	fi
 }
 
-copy_rpm()
+copy_pkg()
 {
     local name=$1;
 	local file="";
@@ -106,7 +108,7 @@ copy_rpm()
 	    if [ -e "$file" ]; then
 			if [ ! -e "$IMG_BASE/$file" ]; then
 				pkg=$(rpm -qf "$file");
-				copy_rpm "$pkg";
+				copy_pkg "$pkg";
 			fi
 			continue;
 		fi
@@ -114,7 +116,7 @@ copy_rpm()
 		#it's name of a rpm package
 		pkg=$(rpm -q "$file" | head -1);
 		if [ "$?" = "0" ]; then
-		    copy_rpm "$pkg";
+		    copy_pkg "$pkg";
 			continue;
 		fi
 		
@@ -124,7 +126,7 @@ copy_rpm()
 		#it's name of a rpm package
 		pkg=$(rpm -q "$file" | head -1);
 		if [ "$?" = "0" ]; then
-		    copy_rpm "$pkg";
+		    copy_pkg "$pkg";
 			continue;
 		fi
 		
@@ -181,46 +183,37 @@ copy_exe()
 }
 
 
-FILE_LST=$(cat <<'EOF'
-strace
-EOF
-);
-
-#make pipe line fail immediately once any of member command fails
-set -o pipefail;
-
-
-while read file;
-do
-    file=$(which "$file");
-	[ ! -e "$file" ] && { echo "Skip non-existing file $file."; continue; }
-	
-	copy_exe "$file";
-done <<<"$FILE_LST";
-
 #for base system
-copy_rpm "filesystem";
-copy_rpm "setup";
-copy_rpm "coreutils";
-copy_rpm "passwd"
-copy_rpm "bash"
-copy_rpm "shadow-utils"
-
+copy_base_system()
+{
+	copy_pkg "filesystem";
+	copy_pkg "setup";
+	copy_pkg "coreutils";
+	copy_pkg "passwd"
+	copy_pkg "bash"
+	copy_pkg "shadow-utils"
+	
+	#for rpm
+	copy_pkg "rpm";
+	
+	#for useful tools
+	copy_pkg "vim-minimal"
+	copy_pkg "procps-ng"
+	copy_pkg "findutils"
+	copy_pkg "iputils"
+}
 
 #for network
-copy_rpm "openssh-clients"
-copy_rpm "openssh-server"
-copy_rpm "net-tools"
-copy_rpm "hostname"
-cp -rfpP /etc/ssh "$IMG_BASE/etc/"
-cp -rfpP /root/.ssh "$IMG_BASE/root/"
+copy_ssh_util()
+{
+	copy_pkg "openssh-clients"
+	copy_pkg "openssh-server"
+	copy_pkg "net-tools"
+	copy_pkg "hostname"
+	cp -rfpP /etc/ssh "$IMG_BASE/etc/"
+	cp -rfpP /root/.ssh "$IMG_BASE/root/"
+}
 
-#for rpm
-copy_rpm "rpm";
 
-#for useful tools
-copy_rpm "vim-minimal"
-copy_rpm "procps-ng"
-copy_rpm "findutils"
-copy_rpm "iputils"
+
 
