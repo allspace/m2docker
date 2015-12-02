@@ -1,0 +1,11 @@
+MAKEDEV
+hwdata
+lvm2
+device-mapper
+mkinitrd
+hal
+hotplug
+usbutils
+kernel
+sendmail
+
